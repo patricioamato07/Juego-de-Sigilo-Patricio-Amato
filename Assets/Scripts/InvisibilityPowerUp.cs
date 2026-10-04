@@ -1,24 +1,26 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
-public class DashPowerUp : MonoBehaviour
+public class InvisibilityPowerUp : MonoBehaviour
 {
     [SerializeField] private string playerTag = "Player";
+    [SerializeField] private float duration = 8f;
     [SerializeField] private AudioClip pickupSound;
     [SerializeField] private GameObject pickupParticles;
+
     private void Reset()
     {
         GetComponent<Collider>().isTrigger = true;
     }
+
     private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag)) return;
 
-        var controller = other.GetComponent<ThirdPersonController>();
-        if (controller == null)
-
+        var invisibility = other.GetComponentInParent<PlayerInvisibility>();
+        if (invisibility == null)
         {
-            Debug.LogWarning("DashPowerUp: el objeto con tag Player no tiene ThirdPersonController.");
+            Debug.LogWarning("InvisibilityPowerUp: el jugador no tiene el componente PlayerInvisibility.");
             return;
         }
 
@@ -32,12 +34,11 @@ public class DashPowerUp : MonoBehaviour
             Instantiate(pickupParticles, transform.position, Quaternion.identity);
         }
 
-        controller.UnlockDash();
+        invisibility.Activate(duration);
 
-        if (GameUIManager.Instance != null)
-        {
-            GameUIManager.Instance.ShowDashUnlockedMessage();
-        }
+        // Si quieres mensaje en pantalla, agrega este método a GameUIManager y descomenta:
+        // if (GameUIManager.Instance != null)
+        //     GameUIManager.Instance.ShowInvisibilityMessage(duration);
 
         Destroy(gameObject);
     }

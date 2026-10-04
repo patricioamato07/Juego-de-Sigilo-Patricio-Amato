@@ -13,14 +13,6 @@ public class ThirdPersonController : MonoBehaviour
     public float fallMultiplier = 2.5f;
     public float lowJumpMultiplier = 2f;
 
-    [Header("Dash")]
-    public float dashSpeed = 20f;
-    public float dashDuration = 0.15f;
-    public float dashCooldown = 0.8f;
-    public int maxAirDashes = 1;
-    public bool hasDashUnlocked = false;
-    public AudioClip dashSound;
-
     public float mouseSensitivity = 0.12f;
     public float cameraDistance = 5f;
     public float cameraHeight = 1.6f;
@@ -29,13 +21,6 @@ public class ThirdPersonController : MonoBehaviour
     private float yaw;
     private float pitch;
 
-    private bool isDashing;
-    private float dashTimer;
-    private float dashCooldownTimer;
-    private Vector3 dashDirection;
-    private int airDashesUsed;
-    private bool wasGroundedLastFrame;
-
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -43,33 +28,15 @@ public class ThirdPersonController : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         Cursor.lockState = CursorLockMode.Locked;
     }
+
     void Update()
     {
         Look();
         Jump();
-        HandleDashInput();
     }
 
     private void FixedUpdate()
     {
-        bool grounded = IsGrounded();
-        if (grounded && !wasGroundedLastFrame)
-        {
-            airDashesUsed = 0;
-        }
-        wasGroundedLastFrame = grounded;
-
-        if (dashCooldownTimer > 0f)
-        {
-            dashCooldownTimer -= Time.fixedDeltaTime;
-        }
-
-        if (isDashing)
-        {
-            PerformDashStep();
-            return;
-        }
-
         Move();
         ApplyCustomGravity();
     }
@@ -78,6 +45,7 @@ public class ThirdPersonController : MonoBehaviour
     {
         PositionCamera();
     }
+
     void Look()
     {
         Vector2 mouseDelta = Mouse.current.delta.ReadValue();
@@ -104,21 +72,8 @@ public class ThirdPersonController : MonoBehaviour
     {
         if (!Keyboard.current.spaceKey.wasPressedThisFrame) return;
 
-        if (isDashing)
-        {
-            CancelDash();
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            return;
-        }
-
         if (IsGrounded())
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-    }
-
-    void CancelDash()
-    {
-        isDashing = false;
-        rb.useGravity = true;
     }
 
     bool IsGrounded()
@@ -157,73 +112,6 @@ public class ThirdPersonController : MonoBehaviour
         else if (rb.linearVelocity.y > 0f && !Keyboard.current.spaceKey.isPressed)
         {
             rb.AddForce(Physics.gravity * (lowJumpMultiplier - 1f), ForceMode.Acceleration);
-        }
-    }
-
-    // --- Dash ---
-
-    void HandleDashInput()
-    {
-        if (isDashing) return;
-
-        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && CanDash())
-        {
-            StartDash();
-        }
-    }
-
-    bool CanDash()
-    {
-        if (!hasDashUnlocked) return false;
-        if (dashCooldownTimer > 0f) return false;
-        if (!IsGrounded() && airDashesUsed >= maxAirDashes) return false;
-        return true;
-    }
-
-    public void UnlockDash()
-    {
-        hasDashUnlocked = true;
-    }
-
-    void StartDash()
-    {
-        Vector3 input = GetMoveInput();
-        Vector3 dir = transform.forward * input.z + transform.right * input.x;
-
-        if (dir.sqrMagnitude < 0.01f)
-        {
-            dir = transform.forward;
-        }
-
-        dashDirection = dir.normalized;
-        dashTimer = dashDuration;
-        dashCooldownTimer = dashCooldown;
-        isDashing = true;
-
-        if (!IsGrounded())
-        {
-            airDashesUsed++;
-        }
-
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        rb.useGravity = false;
-
-        if (dashSound != null)
-        {
-            AudioSource.PlayClipAtPoint(dashSound, transform.position);
-        }
-    }
-
-    void PerformDashStep()
-    {
-        dashTimer -= Time.fixedDeltaTime;
-
-        rb.linearVelocity = dashDirection * dashSpeed;
-
-        if (dashTimer <= 0f)
-        {
-            isDashing = false;
-            rb.useGravity = true;
         }
     }
 }
